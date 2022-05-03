@@ -2,8 +2,11 @@
 #define RENDERER_H
 
 #include <cstddef>
+#include <cfloat>
 #include <thread>
 #include <vector>
+
+#include <glm/glm.hpp>
 
 namespace pr
 {
@@ -14,11 +17,20 @@ namespace pr
         constexpr color(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a) noexcept : r(r), g(g), b(b), a(a) {}
     };
 
+    struct height_map
+    {
+        std::size_t w, h;
+        std::vector<float> data;
+        height_map();
+        height_map(std::size_t w, std::size_t h, const char *image_path);
+        float get_point(std::size_t x, std::size_t z) const;
+    };
+
     struct window_renderer
     {
         static constexpr std::size_t WINDOW_W = 640, WINDOW_H = 480;
-        static constexpr std::size_t MAP_W = 256, MAP_H = 256;
-        std::vector<float> height_map;
+        height_map hmap;
+        glm::vec3 camera_pos = glm::vec3(0,100,0);
         bool not_closed = true;
         std::thread render_thread;
         /*
@@ -27,7 +39,7 @@ namespace pr
         void start_rendering();
         void close_rendering();
 
-        void load_height_map(const char* path);
+        void load_height_map(std::size_t w, std::size_t h, const char *path);
     };
 }
 
