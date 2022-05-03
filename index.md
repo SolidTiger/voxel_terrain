@@ -1,4 +1,4 @@
-### Blog for project in DH2323
+# Blog for project in DH2323
 
 ## First blog 3/5
 I have set upp the project with all the libraries. I started with creating a quad in opengl
