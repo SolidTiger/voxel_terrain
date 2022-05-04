@@ -4,7 +4,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a -pthread")
 
 project(voxel_terrain)
 
-add_compile_options(-pthread -Wall -Wextra -Wpedantic -Wundef -O2)
+add_compile_options(-pthread -Wall -Wextra -Wpedantic -Wundef -O3)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
 
