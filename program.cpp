@@ -6,7 +6,7 @@ namespace pr
 {
     void program::start()
     {
-        renderer.load_height_map(1024, 1024, "../res/hmap5.png", "../res/colormap5.png");
+        renderer.load_height_map(1024, 1024, "../res/hmap6.png", "../res/colormap51.png", "../shadow_baking/build/shadowmap.ppm");
         renderer.start_rendering();
         SDL_Event event_sdl;
         bool no_close_event = true;
@@ -54,6 +54,9 @@ namespace pr
                 renderer.camera_pos.x -= dir.x * 50 * dt;
                 renderer.camera_pos.z -= dir.y * 50 * dt;
             }
+
+            if(renderer.camera_pos.y < renderer.hmap.get_point(renderer.camera_pos.x, renderer.camera_pos.z) * renderer.terrain_scale + 1.0f)
+                renderer.camera_pos.y = renderer.hmap.get_point(renderer.camera_pos.x, renderer.camera_pos.z) * renderer.terrain_scale + 1.0f;
         }
         renderer.close_rendering();
     }

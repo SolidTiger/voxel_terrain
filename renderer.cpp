@@ -24,58 +24,70 @@ namespace // anonymous namespace
     void draw_vline(int x, int y1, int y2, pr::color color)
     {
 
-        if (x >= pr::window_renderer::WINDOW_W || x < 0)
+        if (x >= pr::window_renderer::TEXTURE_W || x < 0)
             return;
 
         for (int y = y1; y < y2 + 1; y++)
         {
-            if (y >= pr::window_renderer::WINDOW_W || y < 0)
+            if (y >= pr::window_renderer::TEXTURE_H || y < 0)
                 continue;
-            pixel_buffer[y * pr::window_renderer::WINDOW_W + x] = color;
+            pixel_buffer[y * pr::window_renderer::TEXTURE_W + x] = color;
         }
     }
 
+
     void draw_terrain(const pr::window_renderer *renderer)
     {
-        const int distance = 500;
-        const float focus = pr::window_renderer::WINDOW_W / 2;
+        const int distance = 800;
+        const float focus = pr::window_renderer::TEXTURE_W / 2;
 
-        std::array<int, pr::window_renderer::WINDOW_W> depth_buffer;
-        std::fill(depth_buffer.begin(), depth_buffer.end(), pr::window_renderer::WINDOW_H - 1);
+        std::array<int, pr::window_renderer::TEXTURE_W> depth_buffer;
+        std::fill(depth_buffer.begin(), depth_buffer.end(), pr::window_renderer::TEXTURE_H - 1);
 
         float r = renderer->camera_rotation;
         const glm::mat2 rotation = glm::mat2(
             glm::cos(r), -glm::sin(r),
             glm::sin(r), glm::cos(r));
-        for (int z = 1; z < distance; z++)
+        for (float z = 0.1; z < distance; z += 0.2f)
         {
-
-            auto left = glm::normalize(glm::vec2(-int(pr::window_renderer::WINDOW_W) / 2, focus)) * float(z);
-            auto right = glm::normalize(glm::vec2(pr::window_renderer::WINDOW_W / 2, focus)) * float(z);
+            auto left = glm::normalize(glm::vec2(-int(pr::window_renderer::TEXTURE_W) / 2, focus)) * float(z);
+            auto right = glm::normalize(glm::vec2(pr::window_renderer::TEXTURE_W / 2, focus)) * float(z);
             left = rotation * left + glm::vec2(renderer->camera_pos.x, renderer->camera_pos.z);
             right = rotation * right + glm::vec2(renderer->camera_pos.x, renderer->camera_pos.z);
 
-            auto dx = (right - left) / float(pr::window_renderer::WINDOW_W);
+            auto dx = (right - left) / float(pr::window_renderer::TEXTURE_W);
 
-            for (int i = 0; i < pr::window_renderer::WINDOW_W; i++)
+            float interpolated_distance = float(z) / float(distance);
+
+            for (int i = 0; i < pr::window_renderer::TEXTURE_W; i++)
             {
                 float point_height = renderer->hmap.get_point(left.x, left.y);
                 if (point_height != std::numeric_limits<float>::min())
                 {
-                    float height_on_screen = (-point_height * 200 + renderer->camera_pos.y) * focus / float(z) +
-                                             float(pr::window_renderer::WINDOW_H) / 2;
+                    float height_on_screen = (-point_height * renderer->terrain_scale + renderer->camera_pos.y) * focus / float(z) +
+                                             float(pr::window_renderer::TEXTURE_H) / 2;
                     if (height_on_screen < depth_buffer[i])
                     {
                         auto column_color = renderer->hmap.get_point_color(left.x, left.y);
-                        // column_color.r = std::clamp(float(column_color.r) * float(10000.0f / float(z*z)),0.0f, float(column_color.r));
-                        // column_color.g = std::clamp(float(column_color.g) * float(10000.0f / float(z*z)),0.0f, float(column_color.g));
-                        // column_color.b = std::clamp(float(column_color.b) * float(10000.0f / float(z*z)),0.0f, float(column_color.b));
+                        std::uint8_t in_shadow = renderer->hmap.get_shadow_point(left.x, left.y);
+                        if(in_shadow == 1){ //Dummy shadows
+                            column_color.r /= 2;
+                            column_color.g /= 2;
+                            column_color.b /= 2;
+                        }
+                        column_color.r = (1 - interpolated_distance) * column_color.r + interpolated_distance * clear_color.r;
+                        column_color.g = (1 - interpolated_distance) * column_color.g + interpolated_distance * clear_color.g;
+                        column_color.b = (1 - interpolated_distance) * column_color.b + interpolated_distance * clear_color.b;
                         draw_vline(i, height_on_screen, depth_buffer[i], column_color);
                         depth_buffer[i] = height_on_screen;
                     }
                 }
                 left += dx;
             }
+        }
+        for (int i = 0; i < depth_buffer.size(); i++)
+        {
+            draw_vline(i, 0, depth_buffer[i] - 1, clear_color);
         }
     }
 
@@ -163,18 +175,18 @@ namespace // anonymous namespace
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         glTexImage2D(
             GL_TEXTURE_2D, 0, GL_RGBA,
-            pr::window_renderer::WINDOW_W, pr::window_renderer::WINDOW_H,
+            pr::window_renderer::TEXTURE_W, pr::window_renderer::TEXTURE_H,
             0, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_buffer[0]);
     }
 
     void update_texture()
     {
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pr::window_renderer::WINDOW_W, pr::window_renderer::WINDOW_H, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_buffer[0]);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pr::window_renderer::TEXTURE_W, pr::window_renderer::TEXTURE_H, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_buffer[0]);
     }
 
     void internal_loop(const pr::window_renderer *renderer)
@@ -184,7 +196,7 @@ namespace // anonymous namespace
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
         SDL_Window *window = SDL_CreateWindow(
-            "voxel", 0, 0, pr::window_renderer::WINDOW_W, pr::window_renderer::WINDOW_H, SDL_WINDOW_OPENGL);
+            "voxel", 0, 0, pr::window_renderer::WINDOW_W, pr::window_renderer::WINDOW_H, SDL_WINDOW_OPENGL | (SDL_WINDOW_FULLSCREEN * pr::window_renderer::FULLSCREEN));
 
         SDL_GLContext context = SDL_GL_CreateContext(window);
         SDL_GL_SetSwapInterval(0); // Turn of vsync
@@ -193,7 +205,7 @@ namespace // anonymous namespace
 
         glewInit();
 
-        pixel_buffer.resize(pr::window_renderer::WINDOW_W * pr::window_renderer::WINDOW_H);
+        pixel_buffer.resize(pr::window_renderer::TEXTURE_W * pr::window_renderer::TEXTURE_H);
 
         create_quad();
         create_shader_program("../shaders/vertex.glsl", "../shaders/fragment.glsl");
@@ -217,7 +229,7 @@ namespace // anonymous namespace
                 counter = 0;
             }
             glClear(GL_COLOR_BUFFER_BIT);
-            clear_texture();
+            // clear_texture();
             draw_terrain(renderer);
             update_texture();
             glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -235,7 +247,8 @@ namespace pr
 
     height_map::height_map() : w(0), h(0), data() {}
 
-    height_map::height_map(std::size_t w, std::size_t h, const char *heightmap_path, const char *colormap_path) : w(w), h(h)
+    height_map::height_map(std::size_t w, std::size_t h,
+                           const char *heightmap_path, const char *colormap_path, const char *shadowmap_path) : w(w), h(h)
     {
         SDL_Surface *tmp = IMG_Load(heightmap_path);
         SDL_PixelFormat *format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32); // Probably a bad idea
@@ -268,6 +281,23 @@ namespace pr
             colormap[i] = *reinterpret_cast<pr::color *>(loaded_image->pixels + i * 4);
         }
         SDL_FreeSurface(loaded_image);
+
+        if (shadowmap_path == nullptr)
+        {
+            shadowmap.resize(0);
+            return;
+        }
+
+        std::string tmps;
+        std::ifstream shadowmapf(shadowmap_path);
+        shadowmapf >> tmps >> tmps >> tmps;
+        shadowmap.resize(w*h);
+
+        for(int i = 0; shadowmapf >> tmps; i++){
+            shadowmap[i] = std::stoi(tmps);
+        }
+
+        shadowmapf.close();
     }
 
     float height_map::get_point(std::size_t x, std::size_t z) const
@@ -288,6 +318,16 @@ namespace pr
         return colormap[z * w + x];
     }
 
+    std::uint8_t height_map::get_shadow_point(std::size_t x, std::size_t z) const
+    {
+        x += w / 2;
+        z = h / 2 - z;
+        if (x >= w || z >= h)
+            return 0;
+
+        return shadowmap[z * w + x];
+    }
+
     void window_renderer::start_rendering()
     {
         render_thread = std::thread(internal_loop, this);
@@ -299,8 +339,9 @@ namespace pr
         render_thread.join();
     }
 
-    void window_renderer::load_height_map(std::size_t w, std::size_t h, const char *heightmap_path, const char *colormap_path)
+    void window_renderer::load_height_map(std::size_t w, std::size_t h,
+                                          const char *heightmap_path, const char *colormap_path, const char *shadowmap_path)
     {
-        hmap = height_map(w, h, heightmap_path, colormap_path);
+        hmap = height_map(w, h, heightmap_path, colormap_path, shadowmap_path);
     }
 }

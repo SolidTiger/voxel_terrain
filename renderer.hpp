@@ -22,19 +22,24 @@ namespace pr
         std::size_t w, h;
         std::vector<float> data;
         std::vector<color> colormap;
+        std::vector<std::uint8_t> shadowmap;
         height_map();
-        height_map(std::size_t w, std::size_t h, const char *heightmap_path, const char* colormap_path);
+        height_map(std::size_t w, std::size_t h,
+            const char *heightmap_path, const char* colormap_path, const char* shadowmap_path = nullptr);
         float get_point(std::size_t x, std::size_t z) const;
         color get_point_color(std::size_t x, std::size_t z) const;
+        std::uint8_t get_shadow_point(std::size_t x, std::size_t z) const;
     };
 
     struct window_renderer
     {
-        static constexpr std::size_t WINDOW_W = 640, WINDOW_H = 480;
-        static constexpr std::size_t TEXTURE_W = 320, TEXTURE_H = 240;
+        static constexpr std::size_t WINDOW_W = 1920, WINDOW_H = 1080;
+        static constexpr std::size_t TEXTURE_W = 640, TEXTURE_H = 480;
+        static constexpr bool FULLSCREEN = true;
         height_map hmap;
         glm::vec3 camera_pos = glm::vec3(0,100,0);
         float camera_rotation = 0.0f;
+        float terrain_scale = 200;
         bool not_closed = true;
         std::thread render_thread;
         /*
@@ -43,7 +48,7 @@ namespace pr
         void start_rendering();
         void close_rendering();
 
-        void load_height_map(std::size_t w, std::size_t h, const char *heightmap_path, const char *colormap_path);
+        void load_height_map(std::size_t w, std::size_t h, const char *heightmap_path, const char *colormap_path, const char *shadowmap_path = nullptr);
     };
 }
 
