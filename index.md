@@ -21,3 +21,12 @@ is implement the shadow baking. I also have an idea to interpolate between the p
 
 ![Image](images/colored_terrain_buffer.png)
 ![Image](images/pixelated.png)
+
+## Final blog 30/5
+Was a while since I did a submission to the blog. My bachelor thesis came in the way of writing these (and the report). But for a final entry I would like to show shadows and a fly around video. The shadows where pretty painless to implement. The hardest part was implementing the DDA algorithm. Aerial perspective was implemented pretty easily, I just interpolated with the sky color. 
+
+![Image](images/final1.png)
+![Image](images/final2.png)
+![Image](images/final3.png)
+![Image](images/video.gif)
+
